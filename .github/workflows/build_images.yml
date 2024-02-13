@@ -2,12 +2,8 @@ name: Build Images
 
 concurrency: ${{ github.ref }}
 
-on: 
+on:
   push:
-    branches: [main]
-    paths:
-      - 'images/**'
-      - 'scripts/**'
   workflow_dispatch:
 
 jobs:
@@ -31,16 +27,16 @@ jobs:
 
       - name: Login to Azure
         run: az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          
+
       - name: Ensure Bicep
         run: az bicep upgrade
-      
+
       - name: Update pre_build/main.parameters.json
         uses: restackio/update-json-file-action@v2.0
         with:
           file: ./resources/pre_build/main.parameters.json
-          fields: | 
-            { 
+          fields: |
+            {
               "identityName" : "${{env.IDENTITY_NAME}}",
               "galleryName": "${{env.GALLARY_NAME}}" ,
               "network.name": "${{env.VNET_NAME}}",
@@ -50,18 +46,18 @@ jobs:
 
       - name: Deploy Resource Group
         working-directory: ./resources
-        run: az deployment sub create 
-            --name "resource-group-deployment-${{ github.run_id }}" 
-            --location "${{ env.LOCATION }}" 
+        run: az deployment sub create
+            --name "resource-group-deployment-${{ github.run_id }}"
+            --location "${{ env.LOCATION }}"
             --template-file ./templates/resourceGroup/main.bicep
             --parameters name="${{ env.RESOURCE_GROUP_NAME }}" location="${{ env.LOCATION }}"
 
       - name: Deploy Bicep
         working-directory: ./resources
-        run: az deployment group create 
+        run: az deployment group create
           --name "pre-build-deployment-${{ github.run_id }}"
           --resource-group ${{ env.RESOURCE_GROUP_NAME }}
-          --template-file ./pre_build/main.bicep 
+          --template-file ./pre_build/main.bicep
 
       - name: Set subnet resource id as SUBNET_ID environment variable
         run: |
@@ -73,12 +69,11 @@ jobs:
           echo "SUBNET_ID=$subnetResourceId" >> $GITHUB_ENV
 
       - name: Deploy Build ACI Containers
-        run: python "./builder/build.py" --async 
-          --repository "${{ github.repositoryUrl }}" 
-          --revision "${{ github.sha }}" 
-          --token "${{ github.token }}" 
-          --client-id "${{ secrets.AZURE_CLIENT_ID }}" 
-          --client-secret "${{ secrets.AZURE_CLIENT_SECRET }}" 
-          --storage-account "${{ env.STORAGE_ACCOUNT_NAME }}" 
+        run: python "./builder/build.py" --async
+          --repository "${{ github.repositoryUrl }}"
+          --revision "${{ github.sha }}"
+          --token "${{ github.token }}"
+          --client-id "${{ secrets.AZURE_CLIENT_ID }}"
+          --client-secret "${{ secrets.AZURE_CLIENT_SECRET }}"
+          --storage-account "${{ env.STORAGE_ACCOUNT_NAME }}"
           --subnet-id "${{ env.SUBNET_ID }}"
-
