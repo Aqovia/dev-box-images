@@ -14,7 +14,6 @@
         "vnetAddressPrefix": "10.0.0.0/16",
         "defaultSubnetAddressPrefix": "10.0.0.0/24"
     },
-    "sequrityGroupName": "",
     "deffinition" : {
         "name" : "",
         "sku" : "",

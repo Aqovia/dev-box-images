@@ -14,17 +14,15 @@ jobs:
       RESOURCE_GROUP_NAME: aqovia-devbox
       IDENTITY_NAME: aqovia-devcenter-identity
       GALLARY_NAME: aqovia_compute_gallery
-      NETWORK_CONNECTION_NAME: aqovia-devbox-network-connection
+      DEVCENTER_NETWORK_CONNECTION_NAME: aqovia-devcenter-network-connection
       PROJECT_NAME: aqovia-devbox-project
       POOL_NAME: aqovia-devbox-project-pool
       DEFFINITION_NAME: aqovia-devbox-definition
       DEFFINITION_SKU: general_i_8c32gb256ssd_v2 # sku of image (for getting sku list run this command "az devcenter admin sku list --query '[].name' --output table")
       DEFFINITION_IMAGE: Win11-DevBox # name of image (the same name as folder in ./images)
       DEVCENTER_NAME: aqovia-devcenter
-      DEVCENETER_NETWORK_NAME: aqovia-devcenter-network
+      DEVCENETER_VNET_NAME: aqovia-devcenter-vnet
       DEVCENETER_SUBNET_NAME: default
-      DEVCENETER_NETWORK_SEQURITY_GROUP_NAME: aqovia-devcenter-network-security-group
-
 
     steps:
       - uses: actions/checkout@v2
@@ -44,16 +42,15 @@ jobs:
               "devcenterName" : "${{ env.DEVCENTER_NAME }}",
               "identityName" : "${{ env.IDENTITY_NAME }}",
               "galleryName" : "${{ env.GALLARY_NAME }}",
-              "networkConnectionName" : "${{ env.NETWORK_CONNECTION_NAME }}",
+              "networkConnectionName" : "${{ env.DEVCENTER_NETWORK_CONNECTION_NAME }}",
               "projectName" : "${{ env.PROJECT_NAME }}",
               "pool.name" : "${{ env.POOL_NAME }}",
               "pool.deffinitionName" : "${{ env.DEFFINITION_NAME }}",
               "deffinition.name" : "${{ env.DEFFINITION_NAME }}",
               "deffinition.sku" : "${{ env.DEFFINITION_SKU }}",
               "deffinition.imageName" : "${{ env.DEFFINITION_IMAGE }}",
-              "devcenterNetwork.name" : "${{ env.DEVCENETER_NETWORK_NAME }}",
-              "devcenterNetwork.subnetName" : "${{ env.DEVCENETER_SUBNET_NAME }}",
-              "sequrityGroupName" : "${{ env.DEVCENETER_NETWORK_SEQURITY_GROUP_NAME }}"
+              "devcenterNetwork.name" : "${{ env.DEVCENETER_VNET_NAME }}",
+              "devcenterNetwork.subnetName" : "${{ env.DEVCENETER_SUBNET_NAME }}"
             }
 
       - name: Deploy Bicep

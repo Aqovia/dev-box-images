@@ -18,18 +18,8 @@ module networkModule '../templates/network/main.bicep' = {
     location: location
     vnetAddressPrefix: settings.devcenterNetwork.vnetAddressPrefix
     defaultSubnetAddressPrefix : settings.devcenterNetwork.defaultSubnetAddressPrefix
-    networkSecurityGroup: {
-      id: securityGroup.id
-    }
+    networkSecurityGroup:  {}
     delegations: []
-  }
-}
-
-resource securityGroup 'Microsoft.Network/networkSecurityGroups@2023-05-01' = {
-  name: settings.sequrityGroupName
-  location: location
-  properties: {
-    securityRules: []
   }
 }
 
