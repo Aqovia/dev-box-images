@@ -2,45 +2,65 @@ name: Build Images
 
 concurrency: ${{ github.ref }}
 
-on: 
-  push:
-    branches: [main]
-    paths:
-      - 'images/**'
-      - 'scripts/**'
+on:
+  schedule:
+    - cron: "0 0 15 * *"
+
   workflow_dispatch:
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
 
     if: "!contains(join(github.event.commits.*.message), '+nobuild')"
 
     env:
-      RESOURCE_GROUP_NAME: aqovia-devbox
-      IDENTITY_NAME: aqovia-devcenter-identity
-      GALLARY_NAME: aqovia_compute_gallery
-      VNET_NAME: aqovia-devbox-builder-vnet
+      RESOURCE_GROUP_NAME: dlr-devbox
+      IDENTITY_NAME: dlr-devcenter-identity
+      GALLARY_NAME: dlr_compute_gallery
+      VNET_NAME: dlr-devbox-builder-vnet
       SUBNET_NAME: default
-      STORAGE_ACCOUNT_NAME: aqdevboxbuilderstrg
+      STORAGE_ACCOUNT_NAME: dlrdevboxbuilderstrg
       LOCATION: westeurope
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Login to Azure
-        run: az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          
+        run: az login --service-principal -u ${{ env.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ env.AZURE_TENANT_ID }}
+
       - name: Ensure Bicep
         run: az bicep upgrade
-      
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.16.2/yq_linux_amd64
+          sudo chmod +x /usr/bin/yq
+
+      - name: Replace image version in YAML file
+        run: |
+          yq e '.version = "1.0.${{ github.run_number }}"' -i ./images/Win11-DevBox/image.yml
+
+      - name: Display the modified YAML file
+        run: cat ./images/Win11-DevBox/image.yml
+
+      - name: Commit and push changes
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add ./images/Win11-DevBox/image.yml
+          git commit -m "Replace version with 1.0.${{ github.run_number }}"
+          git push origin main --force
+
       - name: Update pre_build/main.parameters.json
         uses: restackio/update-json-file-action@v2.0
         with:
           file: ./resources/pre_build/main.parameters.json
-          fields: | 
-            { 
+          fields: |
+            {
               "identityName" : "${{env.IDENTITY_NAME}}",
               "galleryName": "${{env.GALLARY_NAME}}" ,
               "network.name": "${{env.VNET_NAME}}",
@@ -50,18 +70,18 @@ jobs:
 
       - name: Deploy Resource Group
         working-directory: ./resources
-        run: az deployment sub create 
-            --name "resource-group-deployment-${{ github.run_id }}" 
-            --location "${{ env.LOCATION }}" 
-            --template-file ./templates/resourceGroup/main.bicep
-            --parameters name="${{ env.RESOURCE_GROUP_NAME }}" location="${{ env.LOCATION }}"
+        run: az deployment sub create
+          --name resource-group-deployment-${{ github.run_id }}
+          --location ${{ env.LOCATION }}
+          --template-file ./templates/resourceGroup/main.bicep
+          --parameters name="${{ env.RESOURCE_GROUP_NAME }}" location="${{ env.LOCATION }}"
 
       - name: Deploy Bicep
         working-directory: ./resources
-        run: az deployment group create 
-          --name "pre-build-deployment-${{ github.run_id }}"
+        run: az deployment group create
+          --name pre-build-deployment-${{ github.run_id }}
           --resource-group ${{ env.RESOURCE_GROUP_NAME }}
-          --template-file ./pre_build/main.bicep 
+          --template-file ./pre_build/main.bicep
 
       - name: Set subnet resource id as SUBNET_ID environment variable
         run: |
@@ -73,12 +93,11 @@ jobs:
           echo "SUBNET_ID=$subnetResourceId" >> $GITHUB_ENV
 
       - name: Deploy Build ACI Containers
-        run: python "./builder/build.py" --async 
-          --repository "${{ github.repositoryUrl }}" 
-          --revision "${{ github.sha }}" 
-          --token "${{ github.token }}" 
-          --client-id "${{ secrets.AZURE_CLIENT_ID }}" 
-          --client-secret "${{ secrets.AZURE_CLIENT_SECRET }}" 
-          --storage-account "${{ env.STORAGE_ACCOUNT_NAME }}" 
-          --subnet-id "${{ env.SUBNET_ID }}"
-
+        run: python "./builder/build.py" --async
+          --repository="${{ github.repositoryUrl }}"
+          --revision="${{ github.sha }}"
+          --token="${{ github.token }}"
+          --client-id="${{ env.AZURE_CLIENT_ID }}"
+          --client-secret="${{ secrets.AZURE_CLIENT_SECRET }}"
+          --storage-account="${{ env.STORAGE_ACCOUNT_NAME }}"
+          --subnet-id="${{ env.SUBNET_ID }}"

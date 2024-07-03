@@ -17,7 +17,7 @@ Remove-Item $Env:SystemRoot\system32\Sysprep\unattend.xml -Force -ErrorAction Si
 & $Env:SystemRoot\System32\Sysprep\Sysprep.exe /oobe /generalize /quiet /quit
 
 while ($true) {
-
+	
 	$imageState = (Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State).ImageState
 	Write-Output $imageState
 

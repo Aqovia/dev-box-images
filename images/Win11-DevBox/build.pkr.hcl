@@ -23,7 +23,7 @@ source "azure-arm" "vm" {
   # base image options (Azure Marketplace Images only)
   image_publisher    = "microsoftwindowsdesktop"
   image_offer        = "windows-ent-cpc"
-  image_sku          = "win11-21h2-ent-cpc-m365"
+  image_sku          = "win11-23h2-ent-cpc-m365"
   image_version      = "latest"
   use_azure_cli_auth = true
   # managed image options
@@ -69,7 +69,7 @@ build {
     pause_before    = "2m"
   }
 
-  # https://github.com/rgl/packer-plugin-windows-update
+  #https://github.com/rgl/packer-plugin-windows-update
   provisioner "windows-update" {
   }
 
@@ -86,34 +86,27 @@ build {
   provisioner "powershell" {
     elevated_user     = build.User
     elevated_password = build.Password
-    inline = [
-      // "choco install postman --yes --no-progress",
-      "choco install googlechrome --yes --no-progress",
-      "choco install firefox --yes --no-progress"
+    scripts = [
+      "${path.root}/../../provision/Upgrade-Chocolatey-Packages.ps1"
     ]
   }
 
+  provisioner "windows-restart" {
+    restart_timeout = "30m"
+    pause_before    = "1m"
+  }
+    
   provisioner "powershell" {
     elevated_user     = build.User
     elevated_password = build.Password
-    scripts = [
-      "${path.root}/../../scripts/Install-Git.ps1",
-      "${path.root}/../../scripts/Install-GitHub-CLI.ps1",
-      "${path.root}/../../scripts/Install-DotNet.ps1",
-      "${path.root}/../../scripts/Install-Python.ps1",
-      "${path.root}/../../scripts/Install-GitHubDesktop.ps1",
+     scripts = [
+      "${path.root}/../../provision/Configure-ruby-firewall.ps1",
+      "${path.root}/../../scripts/Install-VS2022.ps1",
       "${path.root}/../../scripts/Install-VSCode.ps1",
-      "${path.root}/../../scripts/Install-AzureCLI.ps1",
-      "${path.root}/../../scripts/Install-VS2022.ps1"
+      "${path.root}/../../provision/Install-vs-extensions.ps1",
+      "${path.root}/../../provision/Configure-environment.ps1"
     ]
   }
-
-  // this doesn't work yet
-  // provisioner "powershell" {
-  //   elevated_user     = build.User
-  //   elevated_password = build.Password
-  //   scripts           = [for r in var.repos : "${path.root}/../../scripts/Clone-Repo.ps1 -Url '${r.url}' -Secret '${r.secret}'"]
-  // }
 
   provisioner "powershell" {
     scripts = [

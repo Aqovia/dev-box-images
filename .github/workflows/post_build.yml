@@ -2,39 +2,40 @@ name: Post Build
 
 concurrency: ${{ github.ref }}
 
-on:
+on: 
   workflow_dispatch:
-  
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     env:
-      RESOURCE_GROUP_NAME: aqovia-devbox
-      IDENTITY_NAME: aqovia-devcenter-identity
-      GALLARY_NAME: aqovia_compute_gallery
-      DEVCENTER_NETWORK_CONNECTION_NAME: aqovia-devcenter-network-connection
-      PROJECT_NAME: aqovia-devbox-project
-      POOL_NAME: aqovia-devbox-project-pool
-      DEFFINITION_NAME: aqovia-devbox-definition
+      RESOURCE_GROUP_NAME: dlr-devbox
+      IDENTITY_NAME: dlr-devcenter-identity
+      GALLARY_NAME: dlr_compute_gallery
+      DEVCENTER_NETWORK_CONNECTION_NAME: dlr-devcenter-network-connection
+      PROJECT_NAME: dlr-devbox-project
+      POOL_NAME: dlr-devbox-project-pool
+      DEFFINITION_NAME: dlr-devbox-definition
       DEFFINITION_SKU: general_i_8c32gb256ssd_v2 # sku of image (for getting sku list run this command "az devcenter admin sku list --query '[].name' --output table")
       DEFFINITION_IMAGE: Win11-DevBox # name of image (the same name as folder in ./images)
-      DEVCENTER_NAME: aqovia-devcenter
-      DEVCENETER_VNET_NAME: aqovia-devcenter-vnet
+      DEVCENTER_NAME: dlr-devcenter
+      DEVCENETER_VNET_NAME: dlr-devcenter-vnet
       DEVCENETER_SUBNET_NAME: default
+      AZURE_TENANT_ID : ${{ vars.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID : ${{ vars.AZURE_CLIENT_ID }}
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Login to Azure
-        run: az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          
+        run: az login --service-principal -u ${{ env.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ env.AZURE_TENANT_ID }}
+
       - name: Ensure Bicep
         run: az bicep upgrade
-        
+
       - name: Update post_build/main.parameters.json
-        uses: restackio/update-json-file-action@v2.0 
+        uses: restackio/update-json-file-action@v2.0
         with:
           file: ./resources/post_build/main.parameters.json
           fields: |
@@ -55,7 +56,7 @@ jobs:
 
       - name: Deploy Bicep
         working-directory: ./resources
-        run: az deployment group create 
-          --name "post_build-${{ github.run_id }}"
+        run: az deployment group create
+          --name post_build-${{ github.run_id }}
           --resource-group ${{ env.RESOURCE_GROUP_NAME }}
           --template-file ./post_build/main.bicep
